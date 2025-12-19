@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cadeado - código de 4 dígitos</title>
+    <style>
+         :root {
+            --bg: #0f1724;
+            --card: #0b1220;
+            --accent: #10b981;
+            --muted: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.04);
+            --glass-2: rgba(255, 255, 255, 0.02);
+        }
+        
+        * {
+            box-sizing: border-box
+        }
+        
+        html,
+        body {
+            height: 100%
+        }
+        
+        body {
+            margin: 0;
+            font-family: Inter, Segoe UI, system-ui, Roboto, "Helvetica Neue", Arial;
+            background: radial-gradient(1200px 600px at 10% 10%, rgba(16, 185, 129, 0.04), transparent 10%), radial-gradient(900px 400px at 90% 90%, rgba(59, 130, 246, 0.02), transparent 10%), var(--bg);
+            color: #e6eef8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .container {
+            width: 360px;
+            max-width: 95vw;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+            border-radius: 14px;
+            padding: 28px;
+            box-shadow: 0 10px 30px rgba(2, 6, 23, 0.65);
+            overflow: hidden;
+            position: relative;
+        }
+        /* faint background symbol */
+        
+        .container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: url("/mnt/data/Design sem nome.png");
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: 220%;
+            opacity: 0.05;
+            /* bem apagado */
+            filter: blur(0.6px) saturate(0.6);
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* content sits above bg symbol */
+        
+        .container>* {
+            position: relative;
+            z-index: 1
+        }
+        /* --- Tela do cadeado --- */
+        
+        .lock-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            transition: transform .7s ease, opacity .7s ease;
+        }
+        
+        .padlock {
+            width: 120px;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: linear-gradient(180deg, #0b1220, #0a0f14);
+            padding: 8px;
+            box-shadow: inset 0 2px 8px rgba(255, 255, 255, 0.03), 0 8px 30px rgba(2, 6, 23, 0.6);
+        }
+        
+        .padlock img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0.2px;
+        }
+        
+        p.sub {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        
+        .code-inputs {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        
+        .code-inputs input {
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.00));
+            color: var(--muted);
+            font-size: 26px;
+            text-align: center;
+            outline: none;
+            transition: box-shadow .15s ease, transform .15s ease;
+        }
+        
+        .code-inputs input:focus {
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.12);
+            color: var(--accent);
+            transform: translateY(-2px);
+            border-color: rgba(16, 185, 129, 0.6);
+        }
+        
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 18px;
+        }
+        
+        .key {
+            height: 52px;
+            border-radius: 10px;
+            background: var(--glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--muted);
+            transition: transform .08s ease, background .12s ease;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        
+        .key:active {
+            transform: translateY(2px);
+        }
+        
+        .key.action {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.06));
+            color: var(--accent);
+        }
+        
+        .hint {
+            margin-top: 12px;
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+        }
+        /* shake animation when wrong */
+        
+        @keyframes shake {
+            10%,
+            90% {
+                transform: translateX(-2px)
+            }
+            20%,
+            80% {
+                transform: translateX(4px)
+            }
+            30%,
+            50%,
+            70% {
+                transform: translateX(-8px)
+            }
+            40%,
+            60% {
+                transform: translateX(8px)
+            }
+        }
+        
+        .wrong {
+            animation: shake .6s cubic-bezier(.36, .07, .19, .97);
+        }
+        /* --- Tela do cartão (imagem) --- */
+        
+        .card-screen {
+            position: absolute;
+            inset: 0;
+            padding: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(2, 6, 23, 0.65), rgba(2, 6, 23, 0.85));
+            transform: translateY(20px) scale(.98);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .7s ease, transform .7s ease;
+        }
+        
+        .card-screen.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        
+        .card-image {
+            width: 100%;
+            max-width: 360px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(2, 6, 23, 0.7);
+            transform: translateY(8px) scale(.98);
+            transition: transform .6s cubic-bezier(.22, .9, .32, 1), opacity .6s ease;
+            opacity: 0;
+        }
+        
+        .card-screen.show .card-image {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        
+        .card-image img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        /* small screens */
+        
+        @media (max-width:420px) {
+            .container {
+                padding: 18px;
+            }
+            .padlock {
+                width: 100px;
+                height: 140px
+            }
+            .code-inputs input {
+                width: 48px;
+                height: 48px;
+                font-size: 22px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" role="main" aria-live="polite">
+        <!-- Lock screen -->
+        <div class="lock-screen" id="lockScreen">
+            <div class="padlock" aria-hidden="true">
+                <!-- imagem do cadeado enviada -->
+                <img src="/mnt/data/ca61feeb-a6bb-452c-8efc-c4685a6b1afa.png" alt="cadeado" />
+            </div>
+            <div style="text-align:center">
+                <h1>Insira o código de 4 dígitos</h1>
+                <p class="sub">APENAS PESSOAS AUTORIZADAS.</p>
+            </div>
+
+            <div class="code-inputs" id="inputs" aria-label="Código de 4 dígitos">
+                <input inputmode="numeric" pattern="[0-9]*" maxlength="1" type="text" aria-label="Dígito 1" />
+                <input inputmode="numeric" pattern="[0-9]*" maxlength="1" type="text" aria-label="Dígito 2" />
+                <input inputmode="numeric" pattern="[0-9]*" maxlength="1" type="text" aria-label="Dígito 3" />
+                <input inputmode="numeric" pattern="[0-9]*" maxlength="1" type="text" aria-label="Dígito 4" />
+            </div>
+
+            <div class="keypad" role="group" aria-label="Teclado numérico">
+                <div class="key">1</div>
+                <div class="key">2</div>
+                <div class="key">3</div>
+                <div class="key">4</div>
+                <div class="key">5</div>
+                <div class="key">6</div>
+                <div class="key">7</div>
+                <div class="key">8</div>
+                <div class="key">9</div>
+                <div class="key action" id="clearKey">Limpar</div>
+                <div class="key">0</div>
+                <div class="key action" id="enterKey">OK</div>
+            </div>
+
+            <p class="hint">APENAS PESSOAS AUTORIZADAS.</p>
+        </div>
+
+        <!-- Card screen (após desbloquear) mostra a imagem do cartão -->
+        <div class="card-screen" id="cardScreen" aria-hidden="true">
+            <div class="card-image" role="dialog" aria-label="Cartão de Acesso">
+                <!-- imagem do cartão enviada -->
+                <img src="/mnt/data/image-Photoroom.png" alt="Cartão de acesso" />
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* -------- CONFIGURAÇÃO --------
+           Código correto solicitado:
+        */
+        const CORRECT_CODE = "2510";
+
+        /* -------- LÓGICA -------- */
+        const inputs = Array.from(document.querySelectorAll('.code-inputs input'));
+        const keys = Array.from(document.querySelectorAll('.key'));
+        const clearKey = document.getElementById('clearKey');
+        const enterKey = document.getElementById('enterKey');
+        const lockScreen = document.getElementById('lockScreen');
+        const cardScreen = document.getElementById('cardScreen');
+
+        let composed = "";
+
+        // auto-focus primeiro input
+        inputs[0].focus();
+
+        // função para tocar som de desbloqueio com WebAudio (curto 'pickup' + decaimento)
+        function playUnlockSound() {
+            try {
+                const ctx = new(window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                // primeiro tom (click)
+                const o1 = ctx.createOscillator();
+                const g1 = ctx.createGain();
+                o1.type = 'sine';
+                o1.frequency.setValueAtTime(800, now);
+                g1.gain.setValueAtTime(0.0001, now);
+                g1.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+                g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+                o1.connect(g1);
+                g1.connect(ctx.destination);
+                o1.start(now);
+                o1.stop(now + 0.18);
+
+                // segundo tom (melodia curta)
+                const o2 = ctx.createOscillator();
+                const g2 = ctx.createGain();
+                o2.type = 'sine';
+                o2.frequency.setValueAtTime(1100, now + 0.12);
+                g2.gain.setValueAtTime(0.0001, now + 0.12);
+                g2.gain.exponentialRampToValueAtTime(0.18, now + 0.14);
+                g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+                o2.connect(g2);
+                g2.connect(ctx.destination);
+                o2.start(now + 0.12);
+                o2.stop(now + 0.42);
+            } catch (e) {
+                console.warn("WebAudio não disponível:", e);
+            }
+        }
+
+        // atualiza string composta e estilo inputs
+        function updateComposed() {
+            composed = inputs.map(i => i.value || '').join('');
+        }
+
+        // limpa inputs
+        function clearAll() {
+            inputs.forEach(i => i.value = '');
+            updateComposed();
+            inputs[0].focus();
+        }
+
+        // tenta validar o código
+        function tryUnlock() {
+            updateComposed();
+            if (composed.length < 4) return; // não faz nada se incompleto
+
+            if (composed === CORRECT_CODE) {
+                // sucesso: tocar som e mostrar cartão (imagem)
+                playUnlockSound();
+                lockScreen.style.transform = 'scale(.96) translateY(10px)';
+                lockScreen.style.opacity = '0.0';
+                setTimeout(() => {
+                    cardScreen.classList.add('show');
+                    lockScreen.style.display = 'none';
+                    cardScreen.setAttribute('aria-hidden', 'false');
+                }, 400);
+            } else {
+                // errado: animação de shake e limpar
+                lockScreen.classList.add('wrong');
+                setTimeout(() => lockScreen.classList.remove('wrong'), 700);
+                setTimeout(clearAll, 420);
+            }
+        }
+
+        // teclado físico
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                const firstEmpty = inputs.find(i => !i.value);
+                if (firstEmpty) {
+                    firstEmpty.value = e.key;
+                    firstEmpty.dispatchEvent(new Event('input'));
+                    const idx = inputs.indexOf(firstEmpty);
+                    if (idx < inputs.length - 1) inputs[idx + 1].focus();
+                    else firstEmpty.blur();
+                    updateComposed();
+                    if (composed.length === 4) tryUnlock();
+                }
+                e.preventDefault();
+            } else if (e.key === 'Backspace') {
+                const lastFilled = [...inputs].reverse().find(i => i.value);
+                if (lastFilled) {
+                    lastFilled.value = '';
+                    lastFilled.focus();
+                    updateComposed();
+                }
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                tryUnlock();
+                e.preventDefault();
+            }
+        });
+
+        // clique no teclado da tela
+        keys.forEach(k => {
+            k.addEventListener('click', () => {
+                const v = k.textContent.trim();
+                if (k === clearKey || v.toLowerCase() === 'limpar') {
+                    clearAll();
+                    return;
+                }
+                if (k === enterKey || v.toLowerCase() === 'ok') {
+                    tryUnlock();
+                    return;
+                }
+                if (/^\d$/.test(v)) {
+                    const firstEmpty = inputs.find(i => !i.value);
+                    if (firstEmpty) {
+                        firstEmpty.value = v;
+                        const idx = inputs.indexOf(firstEmpty);
+                        if (idx < inputs.length - 1) inputs[idx + 1].focus();
+                        else firstEmpty.blur();
+                        updateComposed();
+                        if (composed.length === 4) tryUnlock();
+                    }
+                }
+            });
+        });
+
+        // inputs: apenas dígitos, paste, comportamento de foco
+        inputs.forEach((inp, idx) => {
+            inp.addEventListener('input', (e) => {
+                inp.value = (inp.value || '').replace(/\D/g, '').slice(-1);
+                if (inp.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+                updateComposed();
+                if (composed.length === 4) tryUnlock();
+            });
+
+            inp.addEventListener('paste', (ev) => {
+                ev.preventDefault();
+                const txt = (ev.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
+                for (let i = 0; i < 4; i++) {
+                    inputs[i].value = txt[i] || '';
+                }
+                updateComposed();
+                if (composed.length === 4) tryUnlock();
+            });
+
+            inp.addEventListener('focus', () => inp.select());
+        });
+    </script>
+</body>
+
+</html>
+
+
